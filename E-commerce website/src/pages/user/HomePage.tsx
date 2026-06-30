@@ -75,6 +75,20 @@ export default function HomePage({ token, user, cart, navigate, onLogout, onOpen
     }
   }
 
+  async function buyNow(product: Product, qty = 1) {
+    if (!token) { onOpenAuth(); return; }
+    try {
+      await apiFetch("/api/cart/add", {
+        method: "POST",
+        body: JSON.stringify({ productId: product.id, quantity: qty }),
+      }, token);
+      onCartChange();
+      navigate("cart");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  }
+
   function clearFilters() {
     setSearch(""); setSelectedCat(null); setSort(""); setPriceMin(""); setPriceMax("");
   }
@@ -291,6 +305,10 @@ export default function HomePage({ token, user, cart, navigate, onLogout, onOpen
             await addToCart(selectedProduct.product, qty);
             setSelectedProduct(null);
           }}
+          onBuyNow={async (qty) => {
+            await buyNow(selectedProduct.product, qty);
+            setSelectedProduct(null);
+          }}
         />
       )}
 
@@ -381,13 +399,14 @@ function ProductCard({ product, index, onView, onAdd }: {
 
 // ── Product Detail Modal ──────────────────────────────────────────────────────
 
-function ProductModal({ product, index, token, onClose, onAdd }: {
+function ProductModal({ product, index, token, onClose, onAdd, onBuyNow }: {
   product: Product; index: number; token: string | null;
-  onClose: () => void; onAdd: (qty: number) => Promise<void>;
+  onClose: () => void; onAdd: (qty: number) => Promise<void>; onBuyNow: (qty: number) => Promise<void>;
 }) {
   const [qty, setQty] = useState(1);
   const [imgErr, setImgErr] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [buying, setBuying] = useState(false);
 
   const imgSrc = imgErr || !product.imageUrl?.startsWith("http")
     ? FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
@@ -396,6 +415,11 @@ function ProductModal({ product, index, token, onClose, onAdd }: {
   async function handleAdd() {
     setAdding(true);
     try { await onAdd(qty); } finally { setAdding(false); }
+  }
+
+  async function handleBuyNow() {
+    setBuying(true);
+    try { await onBuyNow(qty); } finally { setBuying(false); }
   }
 
   return (
@@ -437,13 +461,29 @@ function ProductModal({ product, index, token, onClose, onAdd }: {
                 </div>
               </div>
             )}
-            <button
-              onClick={handleAdd}
-              disabled={product.stock === 0 || adding}
-              className="w-full bg-foreground text-primary-foreground py-3.5 text-sm font-semibold uppercase tracking-widest hover:bg-accent transition-colors disabled:opacity-40"
-            >
-              {adding ? "Adding..." : product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-            </button>
+            {product.stock > 0 && (
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleBuyNow}
+                  disabled={buying}
+                  className="w-full bg-accent text-accent-foreground py-3.5 text-sm font-semibold uppercase tracking-widest hover:opacity-90 transition-colors disabled:opacity-40"
+                >
+                  {buying ? "Processing..." : "Buy Now"}
+                </button>
+                <button
+                  onClick={handleAdd}
+                  disabled={adding}
+                  className="w-full border border-border py-3.5 text-sm font-semibold uppercase tracking-widest hover:bg-secondary transition-colors disabled:opacity-40"
+                >
+                  {adding ? "Adding..." : "Add to Cart"}
+                </button>
+              </div>
+            )}
+            {product.stock === 0 && (
+              <button disabled className="w-full bg-foreground text-primary-foreground py-3.5 text-sm font-semibold uppercase tracking-widest opacity-40 cursor-not-allowed">
+                Out of Stock
+              </button>
+            )}
           </div>
         </div>
       </div>

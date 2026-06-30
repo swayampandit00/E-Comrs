@@ -18,9 +18,8 @@ export default function CartDrawer({ cart, token, onClose, onCartChange, onCheck
   async function update(productId: number, quantity: number) {
     if (!token) return;
     try {
-      await apiFetch("/api/cart/update", {
+      await apiFetch(`/api/cart/update?productId=${productId}&quantity=${quantity}`, {
         method: "PUT",
-        body: JSON.stringify({ productId, quantity }),
       }, token);
       onCartChange();
     } catch (err: any) {
@@ -60,9 +59,9 @@ export default function CartDrawer({ cart, token, onClose, onCartChange, onCheck
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="text-xl font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>
             Your Cart
-            {cart && cart.cartItems?.length > 0 && (
+            {cart && cart.items?.length > 0 && (
               <span className="text-sm font-normal text-muted-foreground ml-2">
-                ({cart.cartItems.length} items)
+                ({cart.items.length} items)
               </span>
             )}
           </h2>
@@ -72,43 +71,43 @@ export default function CartDrawer({ cart, token, onClose, onCartChange, onCheck
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {!cart || !cart.cartItems || cart.cartItems.length === 0 ? (
+          {!cart || !cart.items || cart.items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 gap-3 text-muted-foreground">
               <ShoppingCart size={40} strokeWidth={1} />
               <p className="text-sm">Your cart is empty</p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {cart.cartItems?.map((item) => (
-                <div key={item.id} className="flex gap-3 pb-4 border-b border-border last:border-0">
+              {cart.items?.map((item) => (
+                <div key={item.cartItemId} className="flex gap-3 pb-4 border-b border-border last:border-0">
                   <div className="w-16 h-16 bg-secondary flex-shrink-0 overflow-hidden">
                     <img
-                      src={item.imageUrl || FALLBACK_IMAGES[0]}
-                      alt={item.productName}
+                      src={item.product.imageUrl || FALLBACK_IMAGES[0]}
+                      alt={item.product.name}
                       className="w-full h-full object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGES[0]; }}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold leading-snug line-clamp-2" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {item.productName}
+                      {item.product.name}
                     </p>
-                    <p className="text-sm text-accent font-bold mt-0.5">{fmt(item.price)}</p>
+                    <p className="text-sm text-accent font-bold mt-0.5">{fmt(item.product.price)}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
-                        onClick={() => item.quantity > 1 ? update(item.productId, item.quantity - 1) : remove(item.productId)}
+                        onClick={() => item.quantity > 1 ? update(item.product.id, item.quantity - 1) : remove(item.product.id)}
                         className="w-6 h-6 border border-border flex items-center justify-center hover:border-foreground transition-colors"
                       >
                         <Minus size={10} />
                       </button>
                       <span className="text-sm font-semibold w-5 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => update(item.productId, item.quantity + 1)}
+                        onClick={() => update(item.product.id, item.quantity + 1)}
                         className="w-6 h-6 border border-border flex items-center justify-center hover:border-foreground transition-colors"
                       >
                         <Plus size={10} />
                       </button>
-                      <button onClick={() => remove(item.productId)} className="ml-auto p-1 text-muted-foreground hover:text-accent transition-colors">
+                      <button onClick={() => remove(item.product.id)} className="ml-auto p-1 text-muted-foreground hover:text-accent transition-colors">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -119,12 +118,12 @@ export default function CartDrawer({ cart, token, onClose, onCartChange, onCheck
           )}
         </div>
 
-        {cart && cart.cartItems?.length > 0 && (
+        {cart && cart.items?.length > 0 && (
           <div className="p-6 border-t border-border flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Subtotal</span>
               <span className="text-xl font-bold" style={{ fontFamily: "Outfit, sans-serif" }}>
-                {fmt(cart.totalPrice)}
+                {fmt(cart.totalAmount)}
               </span>
             </div>
             <button

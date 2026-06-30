@@ -24,19 +24,29 @@ export interface Product {
 }
 
 export interface CartItem {
-  id: number;
-  productId: number;
-  productName: string;
+  cartItemId: number;
+  product: {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    stock: number;
+    imageUrl: string;
+    category: {
+      id: number;
+      name: string;
+      description: string;
+    };
+    createdAt: string;
+  };
   quantity: number;
-  price: number;
-  imageUrl: string;
+  totalPrice: number;
 }
 
 export interface Cart {
-  id: number;
-  userId: number;
-  cartItems: CartItem[];
-  totalPrice: number;
+  cartId: number;
+  items: CartItem[];
+  totalAmount: number;
 }
 
 export interface OrderItem {

@@ -28,7 +28,7 @@ export default function CartPage({ token, user, cart, navigate, onLogout, onOpen
   async function updateQty(productId: number, quantity: number) {
     if (!token) return;
     try {
-      await apiFetch("/api/cart/update", { method: "PUT", body: JSON.stringify({ productId, quantity }) }, token);
+      await apiFetch(`/api/cart/update?productId=${productId}&quantity=${quantity}`, { method: "PUT" }, token);
       onCartChange();
     } catch (err: any) { toast.error(err.message); }
   }
@@ -55,19 +55,27 @@ export default function CartPage({ token, user, cart, navigate, onLogout, onOpen
     if (!token) return;
     setPlacing(true);
     try {
-      const order = await apiFetch("/api/orders/place", { method: "POST" }, token);
+      const order = await apiFetch("/api/orders/place", { 
+        method: "POST",
+        body: JSON.stringify({ shippingAddress: "Default Address" })
+      }, token);
+      
       const payment = await apiFetch("/api/payment/process", {
         method: "POST",
         body: JSON.stringify({ orderId: order.id, paymentMethod: payMethod }),
       }, token);
-      setConfirm({ orderId: order.id, paymentMethod, transactionId: payment.transactionId, totalAmount: order.totalAmount });
+      
+      setConfirm({ orderId: order.id, paymentMethod: payMethod, transactionId: payment.transactionId || "COD-" + order.id, totalAmount: order.totalAmount });
       setStep("confirm");
       onCartChange();
       toast.success("Order placed successfully!");
-    } catch (err: any) { toast.error(err.message); } finally { setPlacing(false); }
+    } catch (err: any) { 
+      console.error("Order placement error:", err);
+      toast.error(err.message || "Failed to place order"); 
+    } finally { setPlacing(false); }
   }
 
-  const items = cart?.cartItems || [];
+  const items = cart?.items || [];
 
   return (
     <>
@@ -111,33 +119,33 @@ export default function CartPage({ token, user, cart, navigate, onLogout, onOpen
                 {/* Items */}
                 <div className="lg:col-span-2 flex flex-col gap-4">
                   {items.map((item) => (
-                    <div key={item.id} className="bg-card border border-border p-4 flex gap-4">
+                    <div key={item.cartItemId} className="bg-card border border-border p-4 flex gap-4">
                       <div className="w-20 h-20 bg-secondary shrink-0 overflow-hidden">
                         <img
-                          src={item.imageUrl || FALLBACK_IMAGES[0]}
-                          alt={item.productName}
+                          src={item.product.imageUrl || FALLBACK_IMAGES[0]}
+                          alt={item.product.name}
                           onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGES[0]; }}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold leading-snug" style={{ fontFamily: "Outfit, sans-serif" }}>{item.productName}</p>
-                        <p className="text-accent font-bold text-lg mt-1">{fmt(item.price)}</p>
+                        <p className="font-semibold leading-snug" style={{ fontFamily: "Outfit, sans-serif" }}>{item.product.name}</p>
+                        <p className="text-accent font-bold text-lg mt-1">{fmt(item.product.price)}</p>
                         <div className="flex items-center gap-3 mt-3">
                           <div className="flex items-center border border-border">
                             <button
-                              onClick={() => item.quantity > 1 ? updateQty(item.productId, item.quantity - 1) : removeItem(item.productId)}
+                              onClick={() => item.quantity > 1 ? updateQty(item.product.id, item.quantity - 1) : removeItem(item.product.id)}
                               className="px-2.5 py-1.5 hover:bg-secondary transition-colors"
                             >
                               <Minus size={12} />
                             </button>
                             <span className="px-4 py-1.5 text-sm font-semibold">{item.quantity}</span>
-                            <button onClick={() => updateQty(item.productId, item.quantity + 1)} className="px-2.5 py-1.5 hover:bg-secondary transition-colors">
+                            <button onClick={() => updateQty(item.product.id, item.quantity + 1)} className="px-2.5 py-1.5 hover:bg-secondary transition-colors">
                               <Plus size={12} />
                             </button>
                           </div>
-                          <span className="text-sm font-semibold text-muted-foreground">= {fmt(item.price * item.quantity)}</span>
-                          <button onClick={() => removeItem(item.productId)} className="ml-auto text-muted-foreground hover:text-accent transition-colors">
+                          <span className="text-sm font-semibold text-muted-foreground">= {fmt(item.product.price * item.quantity)}</span>
+                          <button onClick={() => removeItem(item.product.id)} className="ml-auto text-muted-foreground hover:text-accent transition-colors">
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -152,7 +160,7 @@ export default function CartPage({ token, user, cart, navigate, onLogout, onOpen
                   <div className="flex flex-col gap-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal ({items.length} items)</span>
-                      <span className="font-semibold">{fmt(cart?.totalPrice || 0)}</span>
+                      <span className="font-semibold">{fmt(cart?.totalAmount || 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Shipping</span>
@@ -160,7 +168,7 @@ export default function CartPage({ token, user, cart, navigate, onLogout, onOpen
                     </div>
                     <div className="border-t border-border pt-3 flex justify-between text-base font-bold">
                       <span>Total</span>
-                      <span className="text-accent text-xl" style={{ fontFamily: "Outfit, sans-serif" }}>{fmt(cart?.totalPrice || 0)}</span>
+                      <span className="text-accent text-xl" style={{ fontFamily: "Outfit, sans-serif" }}>{fmt(cart?.totalAmount || 0)}</span>
                     </div>
                   </div>
                   <button
@@ -188,7 +196,7 @@ export default function CartPage({ token, user, cart, navigate, onLogout, onOpen
 
             <div className="bg-card border border-border p-5 mb-6">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Order Total</p>
-              <p className="text-3xl font-bold text-accent" style={{ fontFamily: "Outfit, sans-serif" }}>{fmt(cart?.totalPrice || 0)}</p>
+              <p className="text-3xl font-bold text-accent" style={{ fontFamily: "Outfit, sans-serif" }}>{fmt(cart?.totalAmount || 0)}</p>
               <p className="text-sm text-muted-foreground mt-1">{items.length} item{items.length !== 1 ? "s" : ""}</p>
             </div>
 
@@ -220,7 +228,7 @@ export default function CartPage({ token, user, cart, navigate, onLogout, onOpen
               disabled={placing}
               className="w-full bg-foreground text-primary-foreground py-4 text-sm font-semibold uppercase tracking-widest hover:bg-accent transition-colors disabled:opacity-50"
             >
-              {placing ? "Placing Order..." : `Place Order — ${fmt(cart?.totalPrice || 0)}`}
+              {placing ? "Placing Order..." : `Place Order — ${fmt(cart?.totalAmount || 0)}`}
             </button>
           </div>
         )}

@@ -16,7 +16,7 @@ export default function UserNavbar({
   user, cart, currentPage, navigate, onLogout, onOpenCart, onOpenAuth
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const cartCount = cart?.cartItems?.reduce((a, i) => a + i.quantity, 0) || 0;
+  const cartCount = cart?.items?.reduce((a, i) => a + i.quantity, 0) || 0;
 
   return (
     <nav className="sticky top-0 z-30 bg-card border-b border-border">

@@ -37,10 +37,9 @@ export default function AdminOrdersPage({ token, user, navigate, onLogout }: Pro
   async function updateStatus(order: Order, status: string) {
     setUpdating(order.id);
     try {
-      await apiFetch(`/api/admin/order/status/${order.id}`, {
+      await apiFetch(`/api/admin/order/status/${order.id}?status=${status}`, {
         method: "PUT",
-        body: JSON.stringify({ status }),
-      }, token).catch(() => {});
+      }, token);
       setOrders((prev) => prev.map((o) => o.id === order.id ? { ...o, status: status as any } : o));
       toast.success(`Order #${order.id} → ${status}`);
       setStatusModal(null);
